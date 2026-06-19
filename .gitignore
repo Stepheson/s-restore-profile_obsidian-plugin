@@ -1,0 +1,20 @@
+# --Obsidian fi
+*.log
+.obsidian/
+
+# --npm
+node_modules
+
+# --build
+node_modules/
+dist/
+main.js
+tmp/
+.cache/
+temp/
+
+# --VSCode
+.DS_Store
+.vscode/
+.idea/
+
