@@ -1,0 +1,108 @@
+/* S-Restore Profile — styles.css */
+
+.s-restore-profile-modal {
+  padding: 8px 4px;
+}
+
+.s-restore-profile-sub {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  margin-bottom: 12px;
+}
+
+/* Quick actions bar */
+.s-restore-profile-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+/* Scrollable plugin list */
+.s-restore-profile-list {
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  padding: 4px 0;
+  margin-bottom: 12px;
+}
+
+.s-restore-profile-item {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  gap: 8px;
+}
+
+.s-restore-profile-item:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.s-restore-profile-item label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.s-restore-profile-id {
+  font-size: var(--font-ui-small);
+  font-family: var(--font-monospace);
+  color: var(--text-normal);
+}
+
+.s-restore-profile-badge {
+  font-size: var(--font-ui-smaller);
+  color: var(--color-green);
+}
+
+/* Log area */
+.s-restore-profile-log {
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  background-color: var(--background-secondary);
+  border-radius: var(--radius-s);
+  padding: 10px 12px;
+  max-height: 180px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+  white-space: pre-wrap;
+  color: var(--text-muted);
+}
+
+/* Error message */
+.s-restore-profile-error {
+  color: var(--color-red);
+  font-size: var(--font-ui-small);
+}
+
+/* Footer buttons */
+.s-restore-profile-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Danger Button (Uninstall) */
+.s-restore-profile-btn-danger {
+  background-color: var(--background-modifier-error) !important;
+  color: var(--text-on-accent) !important;
+}
+
+.s-restore-profile-btn-danger:hover {
+  background-color: var(--background-modifier-error-hover) !important;
+}
+
+.s-restore-profile-btn-danger:disabled {
+  background-color: var(--background-modifier-border) !important;
+  color: var(--text-muted) !important;
+  cursor: not-allowed;
+}
+
+/* Dynamic Width Modal adjustments */
+.s-restore-profile-window {
+  width: auto !important;
+  min-width: 600px;
+  max-width: calc(var(--modal-width, 600px) + 300px) !important;
+}

@@ -6,9 +6,8 @@
 node_modules
 
 # --build
-node_modules/
-dist/
 main.js
+dist/
 tmp/
 .cache/
 temp/
@@ -17,4 +16,3 @@ temp/
 .DS_Store
 .vscode/
 .idea/
-
