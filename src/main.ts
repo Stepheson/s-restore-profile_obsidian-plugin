@@ -1,5 +1,28 @@
 import { Plugin, Modal, Notice, requestUrl, normalizePath, App, Vault, addIcon } from "obsidian";
 
+// activeDocument is provided by Obsidian for cross-window compatibility
+declare const activeDocument: Document;
+
+interface AppWithPlugins extends App {
+  plugins?: {
+    uninstallPlugin?: (id: string) => Promise<void>;
+  };
+}
+
+interface ManifestData {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  author: string;
+}
+
+interface ThemeManifestData {
+  name: string;
+  version: string;
+  author: string;
+}
+
 const PLUGINS_INDEX_URL =
   "https://raw.githubusercontent.com/obsidianmd/obsidian-releases/master/community-plugins.json";
 const THEMES_INDEX_URL =
@@ -51,7 +74,7 @@ interface ProfileData {
 async function fetchIndex(type: "plugins" | "themes"): Promise<PluginIndexEntry[]> {
   const url = type === "plugins" ? PLUGINS_INDEX_URL : THEMES_INDEX_URL;
   const res = await requestUrl({ url });
-  return res.json;
+  return res.json as PluginIndexEntry[];
 }
 
 async function getLatestTagInfo(repo: string): Promise<{ tag: string; branch: string } | null> {
@@ -62,7 +85,9 @@ async function getLatestTagInfo(repo: string): Promise<{ tag: string; branch: st
         throw: false,
       });
       if (res.status === 200) {
-        return { tag: res.json.version ?? null, branch };
+        const data = res.json as { version?: string };
+        if (!data.version) continue;
+        return { tag: data.version, branch };
       }
     } catch {
       continue;
@@ -144,7 +169,7 @@ async function installItem(
     });
     if (res.status !== 200) throw new Error("API unavailable");
 
-    const releases: GithubRelease[] = res.json;
+    const releases = res.json as GithubRelease[];
     if (!Array.isArray(releases) || !releases.length)
       throw new Error("No releases found");
 
@@ -233,7 +258,7 @@ class ConfirmModal extends Modal {
     contentEl.createEl("p", { text: this.message });
 
     const footer = contentEl.createDiv({ cls: "s-restore-profile-footer" });
-    footer.style.marginTop = "20px";
+    footer.setCssStyles({ marginTop: "20px" });
 
     const btnConfirm = footer.createEl("button", {
       text: "Yes",
@@ -287,12 +312,24 @@ class ReinstallerModal extends Modal {
 
     contentEl.createEl("h2", { text: "S-Restore Profile" });
 
+    // Fetch indexes once before rendering to prevent multiple concurrent requests
+    try {
+      this.pluginIndex = await fetchIndex("plugins");
+    } catch {
+      // Ignore index fetch errors
+    }
+    try {
+      this.themeIndex = await fetchIndex("themes");
+    } catch {
+      // Ignore index fetch errors
+    }
+
     let activePlugins: string[] = [];
     try {
       const raw = await this.app.vault.adapter.read(
         normalizePath(".obsidian/community-plugins.json")
       );
-      activePlugins = JSON.parse(raw);
+      activePlugins = JSON.parse(raw) as string[];
     } catch {
       // It's ok if community-plugins.json doesn't exist
     }
@@ -302,7 +339,8 @@ class ReinstallerModal extends Modal {
       const raw = await this.app.vault.adapter.read(
         normalizePath(".obsidian/appearance.json")
       );
-      activeTheme = JSON.parse(raw).cssTheme || "";
+      const appearanceData = JSON.parse(raw) as { cssTheme?: string };
+      activeTheme = appearanceData.cssTheme || "";
     } catch {
       // ignore
     }
@@ -312,7 +350,7 @@ class ReinstallerModal extends Modal {
       for (const folder of pluginDirList.folders) {
         try {
           const manifestRaw = await this.app.vault.adapter.read(`${folder}/manifest.json`);
-          const manifest = JSON.parse(manifestRaw);
+          const manifest = JSON.parse(manifestRaw) as ManifestData;
           if (manifest.id === "s-restore-profile") continue; // skip ourselves
 
           this.profilePlugins.push({
@@ -336,7 +374,7 @@ class ReinstallerModal extends Modal {
       for (const folder of themeDirList.folders) {
         try {
           const manifestRaw = await this.app.vault.adapter.read(`${folder}/manifest.json`);
-          const manifest = JSON.parse(manifestRaw);
+          const manifest = JSON.parse(manifestRaw) as ThemeManifestData;
           this.profileThemes.push({
             name: manifest.name,
             version: manifest.version,
@@ -367,18 +405,24 @@ class ReinstallerModal extends Modal {
   renderList(contentEl: HTMLElement) {
     // Tabs
     const tabsContainer = contentEl.createDiv({ cls: "s-restore-profile-tabs" });
-    tabsContainer.style.display = "flex";
-    tabsContainer.style.gap = "10px";
-    tabsContainer.style.marginBottom = "10px";
-    tabsContainer.style.borderBottom = "1px solid var(--background-modifier-border)";
+    tabsContainer.setCssStyles({
+      display: "flex",
+      gap: "10px",
+      marginBottom: "10px",
+      borderBottom: "1px solid var(--background-modifier-border)",
+    });
 
     const btnTabPlugins = tabsContainer.createEl("button", { text: "Plugins" });
     const btnTabThemes = tabsContainer.createEl("button", { text: "Themes" });
 
-    btnTabPlugins.style.background = this.currentTab === "plugins" ? "var(--interactive-accent)" : "transparent";
-    btnTabPlugins.style.borderBottom = "none";
-    btnTabThemes.style.background = this.currentTab === "themes" ? "var(--interactive-accent)" : "transparent";
-    btnTabThemes.style.borderBottom = "none";
+    btnTabPlugins.setCssStyles({
+      background: this.currentTab === "plugins" ? "var(--interactive-accent)" : "transparent",
+      borderBottom: "none",
+    });
+    btnTabThemes.setCssStyles({
+      background: this.currentTab === "themes" ? "var(--interactive-accent)" : "transparent",
+      borderBottom: "none",
+    });
 
     btnTabPlugins.onclick = () => { this.currentTab = "plugins"; this.refreshUI(); };
     btnTabThemes.onclick = () => { this.currentTab = "themes"; this.refreshUI(); };
@@ -393,12 +437,16 @@ class ReinstallerModal extends Modal {
 
     // Quick actions
     const actions = contentEl.createDiv({ cls: "s-restore-profile-actions" });
-    actions.style.display = "flex";
-    actions.style.justifyContent = "space-between";
+    actions.setCssStyles({
+      display: "flex",
+      justifyContent: "space-between",
+    });
 
     const leftActions = actions.createDiv({ cls: "s-restore-profile-actions-left" });
-    leftActions.style.display = "flex";
-    leftActions.style.gap = "8px";
+    leftActions.setCssStyles({
+      display: "flex",
+      gap: "8px",
+    });
 
     const btnAll = leftActions.createEl("button", { text: `Select all` });
     btnAll.onclick = () => {
@@ -423,8 +471,10 @@ class ReinstallerModal extends Modal {
     };
 
     const rightActions = actions.createDiv({ cls: "s-restore-profile-actions-right" });
-    rightActions.style.display = "flex";
-    rightActions.style.gap = "8px";
+    rightActions.setCssStyles({
+      display: "flex",
+      gap: "8px",
+    });
 
     const btnGenerate = rightActions.createEl("button", { text: "Generate Profile Data" });
     btnGenerate.onclick = () => this.generateProfileData();
@@ -479,13 +529,7 @@ class ReinstallerModal extends Modal {
             cls: "s-restore-profile-badge",
           });
         } else {
-          let index = isP ? this.pluginIndex : this.themeIndex;
-          if (!index) {
-            try {
-              index = await fetchIndex(isP ? "plugins" : "themes");
-              if (isP) this.pluginIndex = index; else this.themeIndex = index;
-            } catch { }
-          }
+          const index = isP ? this.pluginIndex : this.themeIndex;
           if (index) {
             const inIndex = isP
               ? index.some(i => i.id === idOrName)
@@ -495,7 +539,7 @@ class ReinstallerModal extends Modal {
                 text: "  |  Not found in index",
                 cls: "s-restore-profile-error",
               });
-              errSpan.style.fontSize = "var(--font-ui-smaller)";
+              errSpan.setCssStyles({ fontSize: "var(--font-ui-smaller)" });
             }
           }
         }
@@ -504,25 +548,31 @@ class ReinstallerModal extends Modal {
 
     // Log area
     this.logEl = contentEl.createDiv({ cls: "s-restore-profile-log" });
-    this.logEl.style.display = "none";
+    this.logEl.setCssStyles({ display: "none" });
 
     // Footer buttons
     const footer = contentEl.createDiv({ cls: "s-restore-profile-footer" });
-    footer.style.display = "flex";
-    footer.style.justifyContent = "space-between";
-    footer.style.alignItems = "center";
-    footer.style.marginTop = "20px";
+    footer.setCssStyles({
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: "20px",
+    });
 
     this.selectedCountLabel = footer.createDiv({ cls: "s-restore-profile-count" });
-    this.selectedCountLabel.style.display = "flex";
-    this.selectedCountLabel.style.flexDirection = "column";
-    this.selectedCountLabel.style.fontSize = "var(--font-ui-smaller)";
-    this.selectedCountLabel.style.color = "var(--text-muted)";
+    this.selectedCountLabel.setCssStyles({
+      display: "flex",
+      flexDirection: "column",
+      fontSize: "var(--font-ui-smaller)",
+      color: "var(--text-muted)",
+    });
     this.updateSelectionCount();
 
     const rightFooter = footer.createDiv();
-    rightFooter.style.display = "flex";
-    rightFooter.style.gap = "8px";
+    rightFooter.setCssStyles({
+      display: "flex",
+      gap: "8px",
+    });
 
     this.btnConfirm = rightFooter.createEl("button", {
       text: "Reinstall selected",
@@ -582,10 +632,12 @@ class ReinstallerModal extends Modal {
 
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
+      const a = activeDocument.createElement("a");
       a.href = url;
-      a.download = "s-resprldata-obsidian.json";
+      a.download = "s-restore-profile-data.json";
+      activeDocument.body.appendChild(a);
       a.click();
+      activeDocument.body.removeChild(a);
       URL.revokeObjectURL(url);
 
       new Notice("Profile Data Generated!");
@@ -596,7 +648,7 @@ class ReinstallerModal extends Modal {
   }
 
   loadProfileData() {
-    const input = document.createElement("input");
+    const input = activeDocument.createElement("input");
     input.type = "file";
     input.accept = ".json";
     input.onchange = (e: Event) => {
@@ -606,7 +658,7 @@ class ReinstallerModal extends Modal {
       const reader = new FileReader();
       reader.onload = (ev: ProgressEvent<FileReader>) => {
         try {
-          const data = JSON.parse(ev.target?.result as string);
+          const data = JSON.parse(ev.target?.result as string) as ProfileData | ProfilePluginEntry[];
           if (Array.isArray(data)) {
             // Legacy format
             this.profilePlugins = data;
@@ -624,7 +676,7 @@ class ReinstallerModal extends Modal {
 
           this.refreshUI();
           new Notice("Profile Data Loaded!");
-        } catch (err) {
+        } catch {
           new Notice("Failed to parse JSON.");
         }
       };
@@ -647,7 +699,7 @@ class ReinstallerModal extends Modal {
     this.installing = true;
     this.btnConfirm.disabled = true;
     this.btnConfirm.setText("Installing...");
-    this.logEl.style.display = "block";
+    this.logEl.setCssStyles({ display: "block" });
     this.logEl.empty();
 
     let success = 0, skip = 0, fail = 0;
@@ -695,8 +747,10 @@ class ReinstallerModal extends Modal {
             let cpList: string[] = [];
             try {
               const cpRaw = await this.app.vault.adapter.read(cpPath);
-              cpList = JSON.parse(cpRaw);
-            } catch { }
+              cpList = JSON.parse(cpRaw) as string[];
+            } catch {
+              // community-plugins.json may not exist or be empty
+            }
             if (!cpList.includes(id)) {
               cpList.push(id);
               await this.app.vault.adapter.write(cpPath, JSON.stringify(cpList, null, 2));
@@ -747,11 +801,13 @@ class ReinstallerModal extends Modal {
           this.appendLog(`  ✅ Installed (${result.method})`);
           if (t.active) {
             const apPath = normalizePath(".obsidian/appearance.json");
-            let apData: any = {};
+            let apData: { cssTheme?: string } = {};
             try {
               const apRaw = await this.app.vault.adapter.read(apPath);
-              apData = JSON.parse(apRaw);
-            } catch { }
+              apData = JSON.parse(apRaw) as { cssTheme?: string };
+            } catch {
+              // appearance.json may not exist
+            }
             apData.cssTheme = name;
             await this.app.vault.adapter.write(apPath, JSON.stringify(apData, null, 2));
             this.appendLog(`  ✅ Set as active theme`);
@@ -789,7 +845,7 @@ class ReinstallerModal extends Modal {
     new ConfirmModal(
       this.app,
       `Are you sure you want to uninstall ${selectedPlugins.length} plugin(s) and ${selectedThemes.length} theme(s)? This will delete their files.`,
-      () => this.executeUninstall(selectedPlugins, selectedThemes)
+      () => { this.executeUninstall(selectedPlugins, selectedThemes); }
     ).open();
   }
 
@@ -798,7 +854,7 @@ class ReinstallerModal extends Modal {
     this.btnConfirm.disabled = true;
     this.btnUninstall.disabled = true;
     this.btnUninstall.setText("Uninstalling...");
-    this.logEl.style.display = "block";
+    this.logEl.setCssStyles({ display: "block" });
     this.logEl.empty();
     this.log = [];
 
@@ -816,10 +872,11 @@ class ReinstallerModal extends Modal {
       }
 
       try {
-        if ((this.app as any).plugins && typeof (this.app as any).plugins.uninstallPlugin === "function") {
+        const appWithPlugins = this.app as AppWithPlugins;
+        if (appWithPlugins.plugins && typeof appWithPlugins.plugins.uninstallPlugin === "function") {
           this.appendLog(`  Removing plugin files and disabling...`);
           console.warn(`[S-Restore Profile] Using internal API 'uninstallPlugin' for ${id}`);
-          await (this.app as any).plugins.uninstallPlugin(id);
+          await appWithPlugins.plugins.uninstallPlugin(id);
         } else {
           // Fallback if API not available
           this.appendLog(`  Removing plugin folder...`);
@@ -851,16 +908,18 @@ class ReinstallerModal extends Modal {
 
         // Disable if active
         const apPath = normalizePath(".obsidian/appearance.json");
-        let apData: any = {};
+        let apData: { cssTheme?: string } = {};
         try {
           const apRaw = await this.app.vault.adapter.read(apPath);
-          apData = JSON.parse(apRaw);
+          apData = JSON.parse(apRaw) as { cssTheme?: string };
           if (apData.cssTheme === name) {
             apData.cssTheme = "";
             await this.app.vault.adapter.write(apPath, JSON.stringify(apData, null, 2));
             this.appendLog(`  ✅ Removed from active theme.`);
           }
-        } catch { }
+        } catch {
+          // appearance.json may not exist or be unreadable
+        }
 
         this.appendLog(`  ✅ Uninstalled successfully.`);
         success++;
@@ -888,7 +947,7 @@ class ReinstallerModal extends Modal {
     this.contentEl.createEl("h2", { text: "S-Restore Profile" });
     this.renderList(this.contentEl);
     if (this.log.length > 0) {
-      this.logEl.style.display = "block";
+      this.logEl.setCssStyles({ display: "block" });
       this.logEl.empty();
       this.log.forEach((msg) => {
         this.logEl.createEl("div", { text: msg });
@@ -917,7 +976,7 @@ export default class SRestoreProfile extends Plugin {
 
     this.addCommand({
       id: "open-profile-manager",
-      name: "Open S-Restore Profile",
+      name: "Open profile manager",
       callback: () => new ReinstallerModal(this.app).open(),
     });
 
