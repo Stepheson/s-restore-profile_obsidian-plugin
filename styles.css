@@ -85,24 +85,27 @@
 }
 
 /* Danger Button (Uninstall) */
-.s-restore-profile-btn-danger {
-  background-color: var(--background-modifier-error) !important;
-  color: var(--text-on-accent) !important;
+button.s-restore-profile-btn-danger,
+button.s-restore-profile-btn-danger.mod-cta {
+  background-color: var(--background-modifier-error);
+  color: var(--text-on-accent);
 }
 
-.s-restore-profile-btn-danger:hover {
-  background-color: var(--background-modifier-error-hover) !important;
+button.s-restore-profile-btn-danger:hover,
+button.s-restore-profile-btn-danger.mod-cta:hover {
+  background-color: var(--background-modifier-error-hover);
 }
 
-.s-restore-profile-btn-danger:disabled {
-  background-color: var(--background-modifier-border) !important;
-  color: var(--text-muted) !important;
+button.s-restore-profile-btn-danger:disabled,
+button.s-restore-profile-btn-danger.mod-cta:disabled {
+  background-color: var(--background-modifier-border);
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 
 /* Dynamic Width Modal adjustments */
-.s-restore-profile-window {
-  width: auto !important;
+.modal.s-restore-profile-window {
+  width: auto;
   min-width: 600px;
-  max-width: calc(var(--modal-width, 600px) + 300px) !important;
+  max-width: calc(var(--modal-width, 600px) + 300px);
 }

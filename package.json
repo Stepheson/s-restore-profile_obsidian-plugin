@@ -1,6 +1,6 @@
 {
   "name": "s-restore-profile",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "An [Obsidian](https://obsidian.md) plugin that reinstalls community plugins listed in your `.obsidian/community-plugins.json`, without relying on the built-in plugin manager.",
   "main": "main.js",
   "scripts": {
