@@ -1,10 +1,10 @@
 {
   "id": "s-restore-profile",
   "name": "S-Restore Profile",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "minAppVersion": "1.4.0",
   "description": "Bulk reinstall your community plugins from your existing plugin list.",
-  "author": "Stephenson Alves",
-  "authorUrl": "https://github.com/Stephenson",
+  "author": "Stepheson Alves",
+  "authorUrl": "https://github.com/Stepheson",
   "isDesktopOnly": true
 }
