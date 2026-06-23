@@ -47,6 +47,13 @@ With **S-Restore Profile**, you can:
 5. **Activate:**
    - Restart Obsidian to fully load and activate the newly installed plugins.
 
+<div align="center">
+  <h3>Plugin and Theme Replication to Another Vault</h3>
+  <img width="600" height="468" alt="Image" src="https://github.com/user-attachments/assets/4c80d31a-bd20-4858-8509-bd8374acb6e9" />
+  <br/>
+  <sub>Generating a snapshot of the current profile — exports installed plugins and themes to a <code>.json</code> file, ready to be imported into another profile.</sub>
+</div>
+
 ---
 
 ## How It Works (Download Pipeline)
