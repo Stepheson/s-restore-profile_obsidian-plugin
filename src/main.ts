@@ -3,6 +3,12 @@ import { Plugin, Modal, Notice, requestUrl, normalizePath, App, Vault, addIcon }
 // activeDocument is provided by Obsidian for cross-window compatibility
 declare const activeDocument: Document;
 
+declare module "obsidian" {
+  interface Vault {
+    configDir: string;
+  }
+}
+
 interface AppWithPlugins extends App {
   plugins?: {
     uninstallPlugin?: (id: string) => Promise<void>;
@@ -113,7 +119,7 @@ async function installItem(
   vault: Vault,
   logFn: (msg: string) => void
 ): Promise<{ success: boolean; method?: string }> {
-  const dir = normalizePath(`.obsidian/${type}/${idOrName}`);
+  const dir = normalizePath(`${vault.configDir}/${type}/${idOrName}`);
 
   const saveToDisk = async (buffers: Record<string, ArrayBuffer>) => {
     const dirExists = await vault.adapter.exists(dir);
@@ -327,7 +333,7 @@ class ReinstallerModal extends Modal {
     let activePlugins: string[] = [];
     try {
       const raw = await this.app.vault.adapter.read(
-        normalizePath(".obsidian/community-plugins.json")
+        normalizePath(this.app.vault.configDir + "/community-plugins.json")
       );
       activePlugins = JSON.parse(raw) as string[];
     } catch {
@@ -337,7 +343,7 @@ class ReinstallerModal extends Modal {
     let activeTheme = "";
     try {
       const raw = await this.app.vault.adapter.read(
-        normalizePath(".obsidian/appearance.json")
+        normalizePath(this.app.vault.configDir + "/appearance.json")
       );
       const appearanceData = JSON.parse(raw) as { cssTheme?: string };
       activeTheme = appearanceData.cssTheme || "";
@@ -346,7 +352,7 @@ class ReinstallerModal extends Modal {
     }
 
     try {
-      const pluginDirList = await this.app.vault.adapter.list(normalizePath(".obsidian/plugins"));
+      const pluginDirList = await this.app.vault.adapter.list(normalizePath(this.app.vault.configDir + "/plugins"));
       for (const folder of pluginDirList.folders) {
         try {
           const manifestRaw = await this.app.vault.adapter.read(`${folder}/manifest.json`);
@@ -370,7 +376,7 @@ class ReinstallerModal extends Modal {
     }
 
     try {
-      const themeDirList = await this.app.vault.adapter.list(normalizePath(".obsidian/themes"));
+      const themeDirList = await this.app.vault.adapter.list(normalizePath(this.app.vault.configDir + "/themes"));
       for (const folder of themeDirList.folders) {
         try {
           const manifestRaw = await this.app.vault.adapter.read(`${folder}/manifest.json`);
@@ -391,11 +397,11 @@ class ReinstallerModal extends Modal {
 
     // Initialize all as checked, unless already installed
     for (const p of this.profilePlugins) {
-      const isInstalled = await this.app.vault.adapter.exists(normalizePath(`.obsidian/plugins/${p.id}/main.js`));
+      const isInstalled = await this.app.vault.adapter.exists(normalizePath(`${this.app.vault.configDir}/plugins/${p.id}/main.js`));
       this.checkedPlugins[p.id] = !isInstalled;
     }
     for (const t of this.profileThemes) {
-      const isInstalled = await this.app.vault.adapter.exists(normalizePath(`.obsidian/themes/${t.name}/theme.css`));
+      const isInstalled = await this.app.vault.adapter.exists(normalizePath(`${this.app.vault.configDir}/themes/${t.name}/theme.css`));
       this.checkedThemes[t.name] = !isInstalled;
     }
 
@@ -503,7 +509,7 @@ class ReinstallerModal extends Modal {
         this.updateSelectionCount();
         if (cb.checked) {
           const exists = await this.app.vault.adapter.exists(
-            normalizePath(`.obsidian/${isP ? "plugins" : "themes"}/${idOrName}/${isP ? "main.js" : "theme.css"}`)
+            normalizePath(`${this.app.vault.configDir}/${isP ? "plugins" : "themes"}/${idOrName}/${isP ? "main.js" : "theme.css"}`)
           );
           if (exists) {
             new Notice(`${isP ? "Plugin" : "Theme"} already installed: ${name}`);
@@ -516,9 +522,9 @@ class ReinstallerModal extends Modal {
 
       // Indicate if already installed
       const exists = this.app.vault.adapter.exists(
-        normalizePath(`.obsidian/${isP ? "plugins" : "themes"}/${idOrName}/${isP ? "main.js" : "theme.css"}`)
+        normalizePath(`${this.app.vault.configDir}/${isP ? "plugins" : "themes"}/${idOrName}/${isP ? "main.js" : "theme.css"}`)
       );
-      exists.then(async (e) => {
+      void exists.then(async (e) => {
         if (e) {
           let badgeText = "  |  Installed ✔︎";
           if (!isP && t.active) {
@@ -724,7 +730,7 @@ class ReinstallerModal extends Modal {
         const id = p.id;
         this.appendLog(`\n── [Plugin] ${p.name}`);
 
-        const alreadyInstalled = await this.app.vault.adapter.exists(normalizePath(`.obsidian/plugins/${id}/main.js`));
+        const alreadyInstalled = await this.app.vault.adapter.exists(normalizePath(`${this.app.vault.configDir}/plugins/${id}/main.js`));
         if (alreadyInstalled) {
           this.appendLog(`  ⏭ Already installed, skipping.`);
           skip++;
@@ -743,7 +749,7 @@ class ReinstallerModal extends Modal {
         if (result.success) {
           this.appendLog(`  ✅ Installed (${result.method})`);
           if (p.enabled) {
-            const cpPath = normalizePath(".obsidian/community-plugins.json");
+            const cpPath = normalizePath(this.app.vault.configDir + "/community-plugins.json");
             let cpList: string[] = [];
             try {
               const cpRaw = await this.app.vault.adapter.read(cpPath);
@@ -781,7 +787,7 @@ class ReinstallerModal extends Modal {
         const name = t.name;
         this.appendLog(`\n── [Theme] ${name}`);
 
-        const alreadyInstalled = await this.app.vault.adapter.exists(normalizePath(`.obsidian/themes/${name}/theme.css`));
+        const alreadyInstalled = await this.app.vault.adapter.exists(normalizePath(`${this.app.vault.configDir}/themes/${name}/theme.css`));
         if (alreadyInstalled) {
           this.appendLog(`  ⏭ Already installed, skipping.`);
           skip++;
@@ -800,7 +806,7 @@ class ReinstallerModal extends Modal {
         if (result.success) {
           this.appendLog(`  ✅ Installed (${result.method})`);
           if (t.active) {
-            const apPath = normalizePath(".obsidian/appearance.json");
+            const apPath = normalizePath(this.app.vault.configDir + "/appearance.json");
             let apData: { cssTheme?: string } = {};
             try {
               const apRaw = await this.app.vault.adapter.read(apPath);
@@ -845,7 +851,7 @@ class ReinstallerModal extends Modal {
     new ConfirmModal(
       this.app,
       `Are you sure you want to uninstall ${selectedPlugins.length} plugin(s) and ${selectedThemes.length} theme(s)? This will delete their files.`,
-      () => { this.executeUninstall(selectedPlugins, selectedThemes); }
+      () => { void this.executeUninstall(selectedPlugins, selectedThemes); }
     ).open();
   }
 
@@ -864,7 +870,7 @@ class ReinstallerModal extends Modal {
       const id = p.id;
       this.appendLog(`\n── Uninstalling [Plugin] ${p.name}`);
 
-      const isInstalled = await this.app.vault.adapter.exists(normalizePath(`.obsidian/plugins/${id}/main.js`));
+      const isInstalled = await this.app.vault.adapter.exists(normalizePath(`${this.app.vault.configDir}/plugins/${id}/main.js`));
       if (!isInstalled) {
         this.appendLog(`  ⏭ Not installed, skipping.`);
         skip++;
@@ -880,7 +886,7 @@ class ReinstallerModal extends Modal {
         } else {
           // Fallback if API not available
           this.appendLog(`  Removing plugin folder...`);
-          await this.app.vault.adapter.rmdir(normalizePath(`.obsidian/plugins/${id}`), true);
+          await this.app.vault.adapter.rmdir(normalizePath(`${this.app.vault.configDir}/plugins/${id}`), true);
         }
         this.appendLog(`  ✅ Uninstalled successfully.`);
         success++;
@@ -894,7 +900,7 @@ class ReinstallerModal extends Modal {
       const name = t.name;
       this.appendLog(`\n── Uninstalling [Theme] ${name}`);
 
-      const dir = normalizePath(`.obsidian/themes/${name}`);
+      const dir = normalizePath(`${this.app.vault.configDir}/themes/${name}`);
       const isInstalled = await this.app.vault.adapter.exists(dir);
       if (!isInstalled) {
         this.appendLog(`  ⏭ Not installed, skipping.`);
@@ -907,7 +913,7 @@ class ReinstallerModal extends Modal {
         await this.app.vault.adapter.rmdir(dir, true);
 
         // Disable if active
-        const apPath = normalizePath(".obsidian/appearance.json");
+        const apPath = normalizePath(this.app.vault.configDir + "/appearance.json");
         let apData: { cssTheme?: string } = {};
         try {
           const apRaw = await this.app.vault.adapter.read(apPath);
