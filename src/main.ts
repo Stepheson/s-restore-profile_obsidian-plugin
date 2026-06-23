@@ -916,7 +916,7 @@ export default class SRestoreProfile extends Plugin {
     addIcon("s-restore-profile-icon", S_DOWNLOAD_ICON);
 
     this.addCommand({
-      id: "open-s-restore-profile",
+      id: "open-profile-manager",
       name: "Open S-Restore Profile",
       callback: () => new ReinstallerModal(this.app).open(),
     });
