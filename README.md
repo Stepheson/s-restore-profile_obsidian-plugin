@@ -76,6 +76,16 @@ S-Restore Profile bypasses CORS restrictions and GitHub rate limits by utilizing
 
 ---
 
+## Star History
+
+<a href="https://www.star-history.com/?repos=stepheson%2Fs-restore-profile_obsidian-plugin&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=stepheson/s-restore-profile_obsidian-plugin&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=stepheson/s-restore-profile_obsidian-plugin&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=stepheson/s-restore-profile_obsidian-plugin&type=date&legend=top-left" />
+ </picture>
+</a>
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
